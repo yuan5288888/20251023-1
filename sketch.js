@@ -31,7 +31,9 @@ window.addEventListener('message', function (event) {
         // 關鍵步驟 2: 呼叫重新繪製 (見方案二)
         // ----------------------------------------
         if (typeof redraw === 'function') {
-            redraw(); 
+            // 在 p5.js 中，如果沒有 noLoop() 則不需要手動呼叫 redraw()
+            // 但為了一致性，我們仍然保留它。
+            // 由於我們將移除 noLoop()，draw() 會自動重複執行。
         }
     }
 }, false);
@@ -97,16 +99,22 @@ function explodeFirework() {
 function setup() { 
     // ... (其他設置)
     createCanvas(windowWidth / 2, windowHeight / 2); 
-    background(255); 
-    // 開啟 loop 才能讓粒子動畫持續更新
-    // noLoop(); // 移除此行
+    // 設置 HSB 模式以便於控制煙火顏色
+    colorMode(HSB, 255); 
+    // 不再使用 noLoop()，讓 draw() 持續執行以實現動畫
 } 
 
 // score_display.js 中的 draw() 函數片段
 
 function draw() { 
-    // 讓背景有一點透明度 (0, 0, 0, 25) 可以產生殘影效果
-    background(255); // 清除背景
+    // ***** 關鍵修正：使用帶透明度的黑色/白色背景 *****
+    // 使用 (0, 0, 0, 25) 產生深色殘影效果
+    // 使用 (255, 255, 255, 50) 產生淺色殘影效果
+    // 如果您想要白色背景，請使用：
+    background(255, 50); // 清除背景，並保留前一幀的殘影
+    // 如果您想要黑色背景，請使用：
+    // background(0, 0, 0, 25); 
+
 
     // 計算百分比
     let percentage = (finalScore / maxScore) * 100;
@@ -116,6 +124,9 @@ function draw() {
     // -----------------------------------------------------------------
     textSize(80); 
     textAlign(CENTER);
+    
+    // 將顏色模式切換回 RGB 才能顯示正確的文字顏色
+    colorMode(RGB);
     
     // !!! 關鍵修改點：檢查是否滿分，並觸發煙火 !!!
     if (finalScore > 0 && finalScore === maxScore) {
@@ -176,6 +187,8 @@ function draw() {
     // C. 煙火粒子系統更新與繪製
     // -----------------------------------------------------------------
     
+    // 將顏色模式切換回 HSB 才能顯示彩色煙火
+    colorMode(HSB, 255);
     for (let i = fireworksParticles.length - 1; i >= 0; i--) {
         fireworksParticles[i].update();
         fireworksParticles[i].show();
@@ -185,4 +198,6 @@ function draw() {
             fireworksParticles.splice(i, 1);
         }
     }
+    // 恢復 RGB 模式，確保 draw 結束時畫布狀態一致
+    colorMode(RGB); 
 }
