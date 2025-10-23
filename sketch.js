@@ -3,7 +3,6 @@
 // -----------------------------------------------------------------
 
 
-// let scoreText = "成績分數: " + finalScore + "/" + maxScore;
 // 確保這是全域變數
 let finalScore = 0; 
 let maxScore = 0;
@@ -27,14 +26,7 @@ window.addEventListener('message', function (event) {
         
         console.log("新的分數已接收:", scoreText); 
         
-        // ----------------------------------------
-        // 關鍵步驟 2: 呼叫重新繪製 (見方案二)
-        // ----------------------------------------
-        if (typeof redraw === 'function') {
-            // 在 p5.js 中，如果沒有 noLoop() 則不需要手動呼叫 redraw()
-            // 但為了一致性，我們仍然保留它。
-            // 由於我們將移除 noLoop()，draw() 會自動重複執行。
-        }
+        // 由於 draw() 會持續執行，這裡不需要手動呼叫 redraw()
     }
 }, false);
 
@@ -67,11 +59,12 @@ class Particle {
     }
 
     show() {
-        colorMode(HSB); // 使用 HSB 顏色模式
+        // 注意：這裡不設定 colorMode，因為 draw() 會在繪製粒子前設定為 HSB
         noStroke();
-        fill(this.hu, 255, 255, this.lifespan);
+        // fill(Hue, Saturation, Brightness, Alpha)
+        // 這裡的 255 是因為 setup 中已將 HSB 的範圍設為 255
+        fill(this.hu, 255, 255, this.lifespan); 
         ellipse(this.pos.x, this.pos.y, 4, 4);
-        colorMode(RGB); // 恢復 RGB 顏色模式
     }
 
     isFinished() {
@@ -97,27 +90,22 @@ function explodeFirework() {
 // -----------------------------------------------------------------
 
 function setup() { 
-    // ... (其他設置)
     createCanvas(windowWidth / 2, windowHeight / 2); 
-    // 設置 HSB 模式以便於控制煙火顏色
+    // ***** 關鍵修正 1：設定 HSB 顏色模式的範圍 *****
+    // 讓 HSB 的 H, S, B, Alpha 都使用 0-255 的範圍，與粒子的 lifespan 匹配
     colorMode(HSB, 255); 
-    // 不再使用 noLoop()，讓 draw() 持續執行以實現動畫
+    // 確保 noLoop() 被移除，draw() 才能持續執行
 } 
 
-// score_display.js 中的 draw() 函數片段
-
 function draw() { 
-    // ***** 關鍵修正：使用帶透明度的黑色/白色背景 *****
-    // 使用 (0, 0, 0, 25) 產生深色殘影效果
-    // 使用 (255, 255, 255, 50) 產生淺色殘影效果
-    // 如果您想要白色背景，請使用：
-    background(255, 50); // 清除背景，並保留前一幀的殘影
-    // 如果您想要黑色背景，請使用：
-    // background(0, 0, 0, 25); 
-
+    // ***** 關鍵修正 2：使用帶透明度的背景 *****
+    // 使用 RGB 模式設定背景，帶透明度 (例如 50)，實現粒子殘影效果
+    colorMode(RGB); 
+    background(255, 50); // 白色背景 + 透明度 50
+    
 
     // 計算百分比
-    let percentage = (finalScore / maxScore) * 100;
+    let percentage = (maxScore > 0) ? (finalScore / maxScore) * 100 : 0;
     
     // -----------------------------------------------------------------
     // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
@@ -125,32 +113,31 @@ function draw() {
     textSize(80); 
     textAlign(CENTER);
     
-    // 將顏色模式切換回 RGB 才能顯示正確的文字顏色
-    colorMode(RGB);
     
     // !!! 關鍵修改點：檢查是否滿分，並觸發煙火 !!!
     if (finalScore > 0 && finalScore === maxScore) {
         // 滿分：顯示鼓勵文本，並在畫面上觸發煙火爆炸
-        fill(0, 200, 50); // 綠色 [6]
+        fill(0, 200, 50); // 綠色 
         text("滿分！完美表現！", width / 2, height / 2 - 50);
         
         // ******* 觸發煙火特效 *******
-        if (random(1) < 0.1) { // 以 10% 的機率持續發射煙火
+        // 增加發射頻率，確保更容易看到
+        if (random(1) < 0.2) { // 將機率提高到 20%
             explodeFirework(); 
         }
         
     } else if (percentage >= 90) {
         // 高分：顯示鼓勵文本，使用鮮豔顏色
-        fill(0, 200, 50); // 綠色 [6]
+        fill(0, 200, 50); // 綠色 
         text("恭喜！優異成績！", width / 2, height / 2 - 50);
         
     } else if (percentage >= 60) {
-        // 中等分數：顯示一般文本，使用黃色 [6]
+        // 中等分數：顯示一般文本，使用黃色
         fill(255, 181, 35); 
         text("成績良好，請再接再厲。", width / 2, height / 2 - 50);
         
     } else if (percentage > 0) {
-        // 低分：顯示警示文本，使用紅色 [6]
+        // 低分：顯示警示文本，使用紅色
         fill(200, 0, 0); 
         text("需要加強努力！", width / 2, height / 2 - 50);
         
@@ -171,13 +158,13 @@ function draw() {
     // -----------------------------------------------------------------
     
     if (percentage >= 90) {
-        // 畫一個大圓圈代表完美 [7]
+        // 畫一個大圓圈代表完美 
         fill(0, 200, 50, 150); // 帶透明度
         noStroke();
         circle(width / 2, height / 2 + 150, 150);
         
     } else if (percentage >= 60) {
-        // 畫一個方形 [4]
+        // 畫一個方形 
         fill(255, 181, 35, 150);
         rectMode(CENTER);
         rect(width / 2, height / 2 + 150, 150, 150);
@@ -187,8 +174,8 @@ function draw() {
     // C. 煙火粒子系統更新與繪製
     // -----------------------------------------------------------------
     
-    // 將顏色模式切換回 HSB 才能顯示彩色煙火
-    colorMode(HSB, 255);
+    // ***** 關鍵修正 3：切換到 HSB 模式繪製粒子 *****
+    colorMode(HSB, 255); 
     for (let i = fireworksParticles.length - 1; i >= 0; i--) {
         fireworksParticles[i].update();
         fireworksParticles[i].show();
@@ -198,6 +185,5 @@ function draw() {
             fireworksParticles.splice(i, 1);
         }
     }
-    // 恢復 RGB 模式，確保 draw 結束時畫布狀態一致
-    colorMode(RGB); 
+    // draw() 迴圈下一幀會重新開始，並設置 background(RGB)，所以這裡不需要切換回 RGB。
 }
