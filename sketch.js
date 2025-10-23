@@ -9,6 +9,9 @@ let finalScore = 0;
 let maxScore = 0;
 let scoreText = ""; // 用於 p5.js 繪圖的文字
 
+// !!! 新增：用於煙火特效的粒子陣列 !!!
+let fireworksParticles = [];
+const GRAVITY = 0.2; // 模擬重力
 
 window.addEventListener('message', function (event) {
     // 執行來源驗證...
@@ -33,6 +36,59 @@ window.addEventListener('message', function (event) {
     }
 }, false);
 
+// =================================================================
+// 步驟三：新增 Particle 類別 (用於煙火)
+// -----------------------------------------------------------------
+
+class Particle {
+    constructor(x, y, hu) {
+        this.pos = createVector(x, y);
+        // 給予一個隨機的爆炸速度
+        this.vel = p5.Vector.random2D(); 
+        this.vel.mult(random(2, 10)); // 速度範圍
+        this.acc = createVector(0, 0);
+        this.lifespan = 255;
+        this.hu = hu || random(255); // 色相 (Hue)
+    }
+
+    applyForce(force) {
+        this.acc.add(force);
+    }
+
+    update() {
+        this.applyForce(createVector(0, GRAVITY)); // 套用重力
+        this.vel.add(this.acc);
+        this.pos.add(this.vel);
+        this.acc.mult(0);
+        this.lifespan -= 4; // 減少生命值 (模擬粒子淡出)
+        this.vel.mult(0.95); // 模擬空氣阻力或減速
+    }
+
+    show() {
+        colorMode(HSB); // 使用 HSB 顏色模式
+        noStroke();
+        fill(this.hu, 255, 255, this.lifespan);
+        ellipse(this.pos.x, this.pos.y, 4, 4);
+        colorMode(RGB); // 恢復 RGB 顏色模式
+    }
+
+    isFinished() {
+        return this.lifespan < 0;
+    }
+}
+
+// !!! 新增：觸發爆炸的函數 !!!
+function explodeFirework() {
+    // 爆炸點設在畫面中央上方
+    let x = width / 2;
+    let y = height / 2 - 100;
+    let hu = random(255); // 隨機顏色
+
+    // 產生大量粒子 (模擬爆炸)
+    for (let i = 0; i < 100; i++) {
+        fireworksParticles.push(new Particle(x, y, hu));
+    }
+}
 
 // =================================================================
 // 步驟二：使用 p5.js 繪製分數 (在網頁 Canvas 上顯示)
@@ -42,25 +98,38 @@ function setup() {
     // ... (其他設置)
     createCanvas(windowWidth / 2, windowHeight / 2); 
     background(255); 
-    noLoop(); // 如果您希望分數只有在改變時才繪製，保留此行
+    // 開啟 loop 才能讓粒子動畫持續更新
+    // noLoop(); // 移除此行
 } 
 
 // score_display.js 中的 draw() 函數片段
 
 function draw() { 
+    // 讓背景有一點透明度 (0, 0, 0, 25) 可以產生殘影效果
     background(255); // 清除背景
 
     // 計算百分比
     let percentage = (finalScore / maxScore) * 100;
-
-    textSize(80); 
-    textAlign(CENTER);
     
     // -----------------------------------------------------------------
     // A. 根據分數區間改變文本顏色和內容 (畫面反映一)
     // -----------------------------------------------------------------
-    if (percentage >= 90) {
-        // 滿分或高分：顯示鼓勵文本，使用鮮豔顏色
+    textSize(80); 
+    textAlign(CENTER);
+    
+    // !!! 關鍵修改點：檢查是否滿分，並觸發煙火 !!!
+    if (finalScore > 0 && finalScore === maxScore) {
+        // 滿分：顯示鼓勵文本，並在畫面上觸發煙火爆炸
+        fill(0, 200, 50); // 綠色 [6]
+        text("滿分！完美表現！", width / 2, height / 2 - 50);
+        
+        // ******* 觸發煙火特效 *******
+        if (random(1) < 0.1) { // 以 10% 的機率持續發射煙火
+            explodeFirework(); 
+        }
+        
+    } else if (percentage >= 90) {
+        // 高分：顯示鼓勵文本，使用鮮豔顏色
         fill(0, 200, 50); // 綠色 [6]
         text("恭喜！優異成績！", width / 2, height / 2 - 50);
         
@@ -103,6 +172,17 @@ function draw() {
         rect(width / 2, height / 2 + 150, 150, 150);
     }
     
-    // 如果您想要更複雜的視覺效果，還可以根據分數修改線條粗細 (strokeWeight) 
-    // 或使用 sin/cos 函數讓圖案的動畫效果有所不同 [8, 9]。
+    // -----------------------------------------------------------------
+    // C. 煙火粒子系統更新與繪製
+    // -----------------------------------------------------------------
+    
+    for (let i = fireworksParticles.length - 1; i >= 0; i--) {
+        fireworksParticles[i].update();
+        fireworksParticles[i].show();
+        
+        // 移除已經結束生命的粒子
+        if (fireworksParticles[i].isFinished()) {
+            fireworksParticles.splice(i, 1);
+        }
+    }
 }
